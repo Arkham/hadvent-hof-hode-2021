@@ -49,7 +49,9 @@ updateMap ::
   Cave ->
   HM.HashMap Cave [Cave] ->
   HM.HashMap Cave [Cave]
-updateMap start end =
+updateMap _ "start" acc = acc
+updateMap "end" _ acc = acc
+updateMap start end acc =
   HM.alter
     ( \case
         Just v ->
@@ -58,6 +60,7 @@ updateMap start end =
           Just [end]
     )
     start
+    acc
 
 parseLine :: T.Text -> Maybe (Cave, Cave)
 parseLine input =
@@ -77,26 +80,22 @@ findPaths caveMap isInvalid =
     go [] results = map reverse results
     go paths results =
       let (newPaths, newResults) =
-            unzip $
-              mapMaybe
-                ( \path ->
-                    fmap
-                      ( \values ->
-                          let (newPaths, newResults) = unzip $ List.map (step path) values
-                           in (concat newPaths, concat newResults)
-                      )
-                      (HM.lookup (head path) caveMap)
-                )
-                paths
-       in go (concat newPaths) (concat newResults <> results)
+            foldl
+              ( \acc path ->
+                  let nextHops = HM.lookupDefault [] (head path) caveMap
+                   in foldl (step path) acc nextHops
+              )
+              ([], results)
+              paths
+       in go newPaths newResults
 
-    step path next
+    step path (pathsAcc, resultAcc) next
       | next == "end" =
-        ([], [next : path])
-      | next == "start" || isInvalid next path =
-        ([], [])
+        (pathsAcc, (next : path) : resultAcc)
+      | isInvalid next path =
+        (pathsAcc, resultAcc)
       | otherwise =
-        ([next : path], [])
+        ((next : path) : pathsAcc, resultAcc)
 
 isLower :: T.Text -> Bool
 isLower input = T.toLower input == input
