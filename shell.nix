@@ -8,6 +8,7 @@ let
       containers
       matrix
       split
+      parsec
       unordered-containers
     ];
   ghc = nixpkgs.haskellPackages.ghcWithPackages haskellDeps;
